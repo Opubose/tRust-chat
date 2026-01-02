@@ -90,9 +90,7 @@ You'll need a rust runtime (duh) to run all the code. I recommend using `rustup`
 
 ## Security assurances
 
-An (ostensibly) encrypted chat app worth its salt must bring something to the table, right?
-
-### What I have so far
+Any (ostensibly) encrypted chat app worth its salt must bring something to the table, right?
 
 - [x] Confidentiality: Messages in a secure tunnel are encrypted using `ChaCha20-Poly1305` using a shared session key. Only the intended recipient holding the matching session key can decrypt its contents.
 - [x] Data Integrity: The `Poly1305` authenticator (part of the AEAD cipher) ensures that if a message is tampered with in transit (by the Relay or a MITM), decryption will fail, and the packet will be rejected.
