@@ -13,7 +13,7 @@ pub struct Packet {
 pub enum MessageType {
     Registration {
         sender: String,
-        timestamp: f64
+        timestamp: f64,
     },
     Message {
         sender: String,
@@ -23,8 +23,8 @@ pub enum MessageType {
     Handshake {
         sender: String,
         recipient: String,
-        pubkey: [u8; 32]
-    }
+        pubkey: [u8; 32],
+    },
 }
 
 impl Packet {

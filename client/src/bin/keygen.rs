@@ -25,5 +25,8 @@ fn main() {
 
     println!("Keys saved to:");
     println!("  keys/{}.key (PRIVATE - DO NOT SHARE)", username);
-    println!("  keys/{}.pub (PUBLIC - DO WHATEVER YOU WANT WITH IT)", username);
+    println!(
+        "  keys/{}.pub (PUBLIC - DO WHATEVER YOU WANT WITH IT)",
+        username
+    );
 }

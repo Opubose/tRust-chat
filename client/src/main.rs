@@ -2,12 +2,12 @@ mod input;
 mod network;
 mod state;
 
-use tokio::net::TcpStream;
-use tokio::io::AsyncReadExt;
-use protocol::{Packet, MessageType};
-use protocol::crypto::{Identity, Handshake, SymmetricKey};
+use protocol::crypto::{Handshake, Identity, SymmetricKey};
+use protocol::{MessageType, Packet};
 use std::env;
 use std::fs;
+use tokio::io::AsyncReadExt;
+use tokio::net::TcpStream;
 
 use crate::input::spawn_line_reader;
 use crate::network::send_packet;
@@ -16,18 +16,24 @@ use crate::state::ClientState;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-    let my_name = args.get(1).expect("Usage: cargo run --bin client -- <name>").clone();
+    let my_name = args
+        .get(1)
+        .expect("Usage: cargo run --bin client -- <name>")
+        .clone();
 
     println!("[{}] Loading my private key", my_name);
     let identity = Identity::load(&my_name).expect("Failed to load keys! Run keygen first.");
 
     let relay_addr = "127.0.0.1:8080";
     println!("[{}] Connecting to relay at {}...", my_name, relay_addr);
-    
+
     let socket = match TcpStream::connect(relay_addr).await {
         Ok(s) => s,
         Err(_) => {
-            println!("[{}] Failed to connect to relay. Are you sure it's running?", my_name);
+            println!(
+                "[{}] Failed to connect to relay. Are you sure it's running?",
+                my_name
+            );
             return Ok(());
         }
     };
@@ -41,8 +47,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             timestamp: 0.0,
         };
 
-        println!("[{}] Signing registration request with my private key", my_name);
-        let mut p = Packet { msg, signature: vec![] };
+        println!(
+            "[{}] Signing registration request with my private key",
+            my_name
+        );
+        let mut p = Packet {
+            msg,
+            signature: vec![],
+        };
         p.signature = identity.sign(&p.as_signable_bytes()?);
         p
     };
@@ -76,26 +88,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let handshake = Handshake::new();
 
                     println!("[{}] Computed my DH public key g^a mod p = 0x{}", my_name, hex::encode(handshake.public_key.as_bytes()));
-                    
+
                     let msg = MessageType::Handshake {
                         sender: my_name.clone(),
                         recipient: target.to_string(),
                         pubkey: handshake.public_key.to_bytes(),
                     };
-                    
+
                     println!("[{}] Signing my DH public key with my private key", my_name);
                     let mut pkt = Packet { msg, signature: vec![] };
                     pkt.signature = identity.sign(&pkt.as_signable_bytes()?);
-                    
+
                     println!("[{}] Sending authenticated DH public key to {}", my_name, target);
                     send_packet(&mut writer, &pkt).await?;
 
                     println!("[{}] Waiting for {}'s DH public key...", my_name, target);
-                    
+
                     // Update State
                     state.pending_handshake = Some(handshake);
                     state.peer_target = Some(target.to_string());
-                } 
+                }
                 else if let Some(target) = &state.peer_target {
                     // Send Message
                     if let Some(key) = &state.session_key {
@@ -107,7 +119,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         };
                         let mut pkt = Packet { msg, signature: vec![] };
                         pkt.signature = identity.sign(&pkt.as_signable_bytes()?);
-                        
+
                         if let Err(e) = send_packet(&mut writer, &pkt).await {
                             println!("[{}] Error encountered while sending message: {}", my_name, e);
                         }
@@ -126,11 +138,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("[{}] Terminating session.", my_name);
                     break;
                 }
-                
+
                 let len = u32::from_be_bytes(len_buf) as usize;
                 let mut buf = vec![0u8; len];
                 reader.read_exact(&mut buf).await?;
-                
+
                 let packet: Packet = match bincode::deserialize(&buf) {
                     Ok(p) => p,
                     Err(e) => {
@@ -138,7 +150,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         break;
                     }
                 };
-                
+
                 let sender = match &packet.msg {
                     MessageType::Registration { sender, .. } => sender,
                     MessageType::Message { sender, .. } => sender,
@@ -160,7 +172,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match packet.msg {
                     MessageType::Handshake { sender, pubkey, .. } => {
                         println!("[{}] Handshake received from {}", my_name, sender);
-                        
+
                         if state.pending_handshake.is_some() {
                             // We are Alice (Completing the handshake)
                             println!("[{}] Received {}'s public key = 0x{}", my_name, sender, hex::encode(pubkey));
@@ -187,7 +199,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             state.session_key = Some(SymmetricKey::new(secret));
 
                             println!("[{}] Session key established: 0x{}\n", my_name, hex::encode(secret));
-                            
+
                             // Send reply
                             let msg = MessageType::Handshake {
                                 sender: my_name.clone(),
@@ -198,7 +210,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             println!("[{}] Signing my DH public key with my private key", my_name);
                             let mut pkt = Packet { msg, signature: vec![] };
                             pkt.signature = identity.sign(&pkt.as_signable_bytes()?);
-                            
+
                             println!("[{}] Sending authenticated DH public key to {}", my_name, sender);
                             send_packet(&mut writer, &pkt).await?;
                             state.peer_target = Some(sender.clone());
@@ -228,7 +240,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
-
 
 fn load_public_key(username: &str) -> Option<[u8; 32]> {
     let path = format!("keys/{}.pub", username);

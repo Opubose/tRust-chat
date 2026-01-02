@@ -1,15 +1,15 @@
-use rand::{RngCore, rngs::OsRng};
-use x25519_dalek::{EphemeralSecret, PublicKey};
 use crate::error::ProtocolError;
-use serde::{Serialize, Deserialize};
-use std::fs;
-use ed25519_dalek::{Signer, SigningKey, VerifyingKey, Signature, Verifier};
 use chacha20poly1305::{
-    ChaCha20Poly1305, ChaChaPoly1305, Nonce, aead::{Aead, KeyInit}
+    ChaCha20Poly1305, ChaChaPoly1305, Nonce,
+    aead::{Aead, KeyInit},
 };
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use rand::{RngCore, rngs::OsRng};
+use serde::{Deserialize, Serialize};
+use std::fs;
+use x25519_dalek::{EphemeralSecret, PublicKey};
 
 const NONCE_LEN: usize = 12;
-
 
 pub struct Handshake {
     secret: EphemeralSecret,
@@ -29,7 +29,6 @@ impl Handshake {
     }
 }
 
-
 #[derive(Serialize, Deserialize)]
 pub struct Identity {
     signing_key: SigningKey,
@@ -42,7 +41,10 @@ impl Identity {
         let signing_key = SigningKey::generate(&mut csprng);
         let public_key = VerifyingKey::from(&signing_key);
 
-        Self { signing_key, public_key }
+        Self {
+            signing_key,
+            public_key,
+        }
     }
 
     pub fn public_key_bytes(&self) -> [u8; 32] {
@@ -51,11 +53,12 @@ impl Identity {
 
     pub fn load(name: &str) -> Result<Self, ProtocolError> {
         let filename = format!("keys/{}.key", name);
-        let data = fs::read_to_string(&filename)
-            .map_err(|_| ProtocolError::Io(std::io::Error::new(
+        let data = fs::read_to_string(&filename).map_err(|_| {
+            ProtocolError::Io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Key file not found! {}", filename)
-            )))?;
+                format!("Key file not found! {}", filename),
+            ))
+        })?;
 
         let bytes = hex::decode(data.trim()).map_err(|_| ProtocolError::CryptoError)?;
         bincode::deserialize(&bytes).map_err(ProtocolError::Serialization)
@@ -78,7 +81,7 @@ impl Identity {
         let hex_string = hex::encode(bytes);
 
         fs::write(format!("keys/{}.pub", name), hex_string)?;
-        
+
         Ok(())
     }
 
@@ -87,14 +90,21 @@ impl Identity {
         signature.to_vec()
     }
 
-    pub fn verify(peer_public_key_bytes: &[u8; 32], message: &[u8], signature_bytes: &[u8]) -> Result<(), ProtocolError> {
-        let peer_key = VerifyingKey::from_bytes(peer_public_key_bytes).map_err(|_| ProtocolError::CryptoError)?;
-        let signature = Signature::from_slice(signature_bytes).map_err(|_| ProtocolError::CryptoError)?;
+    pub fn verify(
+        peer_public_key_bytes: &[u8; 32],
+        message: &[u8],
+        signature_bytes: &[u8],
+    ) -> Result<(), ProtocolError> {
+        let peer_key = VerifyingKey::from_bytes(peer_public_key_bytes)
+            .map_err(|_| ProtocolError::CryptoError)?;
+        let signature =
+            Signature::from_slice(signature_bytes).map_err(|_| ProtocolError::CryptoError)?;
 
-        peer_key.verify(message, &signature).map_err(|_| ProtocolError::InvalidSignature)
+        peer_key
+            .verify(message, &signature)
+            .map_err(|_| ProtocolError::InvalidSignature)
     }
 }
-
 
 pub struct SymmetricKey {
     cipher: ChaCha20Poly1305,
@@ -112,7 +122,10 @@ impl SymmetricKey {
         OsRng.fill_bytes(&mut nonce_bytes);
         let nonce = Nonce::from_slice(&nonce_bytes);
 
-        let mut ciphertext = self.cipher.encrypt(nonce, plaintext).map_err(|_| ProtocolError::CryptoError)?;
+        let mut ciphertext = self
+            .cipher
+            .encrypt(nonce, plaintext)
+            .map_err(|_| ProtocolError::CryptoError)?;
 
         let mut packet = nonce_bytes.to_vec();
         packet.append(&mut ciphertext);
@@ -127,7 +140,9 @@ impl SymmetricKey {
 
         let nonce = Nonce::from_slice(&packet[..NONCE_LEN]);
         let ciphertext = &packet[NONCE_LEN..];
-        
-        self.cipher.decrypt(nonce, ciphertext).map_err(|_| ProtocolError::CryptoError)
+
+        self.cipher
+            .decrypt(nonce, ciphertext)
+            .map_err(|_| ProtocolError::CryptoError)
     }
 }

@@ -1,10 +1,10 @@
-use tokio::net::{TcpListener, TcpStream};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::sync::mpsc;
-use protocol::{Packet, MessageType};
+use protocol::{MessageType, Packet};
 use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
+use tokio::sync::mpsc;
 
 type SharedState = Arc<RwLock<HashMap<String, mpsc::UnboundedSender<Packet>>>>;
 
@@ -32,14 +32,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-async fn handle_connection(socket: TcpStream, state: SharedState) -> Result<(), Box<dyn std::error::Error>> {
+async fn handle_connection(
+    socket: TcpStream,
+    state: SharedState,
+) -> Result<(), Box<dyn std::error::Error>> {
     let (tx, mut rx) = mpsc::unbounded_channel::<Packet>();
     let (mut reader, mut writer) = socket.into_split();
     let mut my_username: Option<String> = None;
 
     loop {
         let mut length_buf = [0u8; 4];
-        
+
         tokio::select! {
             // Case A (network read): for when the owner of the connection sends a message (either to the relay or to someone else)
             result = reader.read_exact(&mut length_buf) => {
