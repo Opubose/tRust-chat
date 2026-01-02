@@ -10,7 +10,8 @@ You'll need a rust runtime (duh) to run all the code. I recommend using `rustup`
 
 
 1. Generate keys
-    All the messages for this app are required to be encrypted. Every user/host needs a pair of long-term cryptographic keys for this. Do not worry for I wrote a key generator utility to handle this. You must run this before running the relay server or client(s). `<your username>` refers to, you guess it, your username.
+
+    All the messages for this app are required to be encrypted. Every user/host needs a pair of long-term cryptographic keys for this. Do not worry for I wrote a key generator utility to handle this. You must run this before running the relay server or client(s). `<your username>` refers to, you guessed it, your username.
     ```bash
     cargo run --bin keygen alice    # generate keys for user alice, if desired
     cargo run --bin keygen bob      # generate keys for user bob, if desired
@@ -19,6 +20,7 @@ You'll need a rust runtime (duh) to run all the code. I recommend using `rustup`
     > This creates the `keys/` subdirectory within the project, containing the private and public key-pairs for each user you specified. I promise each host reads only their own private key from this directory, along with the public keys for everyone else.
 
 2. Start the relay
+
     The Relay is the central server. It routes encrypted packets between users but **cannot** read them (because they are unfortunately encrypted). Run this in a terminal window.
 
     ```bash
@@ -27,6 +29,7 @@ You'll need a rust runtime (duh) to run all the code. I recommend using `rustup`
     > You should see it listening on `127.0.0.1:8080`.
 
 3. Start the clients
+
     Open two more terminal windows on your machine. You supply the username of each of your clients through command-line args.
 
     Window #1
@@ -43,6 +46,7 @@ You'll need a rust runtime (duh) to run all the code. I recommend using `rustup`
     > Both clients will automatically load their keys from disk, connect to the relay, and register their presence.
 
 4. Start yapping
+
     To start talking, a user must initiate a secure session (perform a handshake) with their desired recipient.
 
     If you are `alice` and did step 3 successfully, you'd probably want to type
@@ -62,6 +66,7 @@ You'll need a rust runtime (duh) to run all the code. I recommend using `rustup`
     bob should receive this message on the other end.
 
 5. Close chat
+
     If you end your session as a client, type this in.
 
     ```bash
