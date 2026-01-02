@@ -1,0 +1,59 @@
+name: format and test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref || github.ref_name }}
+
+    - name: Set up Rust
+      run: |
+        rustup update stable
+        rustup component add rustfmt
+
+    - name: Auto-format
+      run: cargo fmt --all
+
+    - name: Commit and Push formatting changes
+      # This block checks if rustfmt modified anything.
+      # If yes, it commits the changes using the ORIGINAL commit message.
+      run: |
+        if [[ -n $(git status --porcelain) ]]; then
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Stage all changes
+          git add -A
+          
+          # Retrieve the message of the last commit
+          LAST_MSG=$(git log -1 --pretty=%B)
+          
+          # Create a new commit with the SAME message
+          git commit -m "$LAST_MSG"
+          
+          # Push back to the branch
+          git push
+        else
+          echo "No formatting changes needed."
+        fi
+
+    - name: Build
+      run: cargo build --verbose --workspace
+
+    - name: Run tests
+      run: cargo test --verbose --workspace
