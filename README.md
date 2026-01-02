@@ -41,7 +41,7 @@ You'll need a rust runtime (duh) to run all the code. I recommend using `rustup`
     Window #2
     ```bash
     cargo run --bin client -- <username 2>
-    # cargo run --bin client -- alice
+    # cargo run --bin client -- bob
     ```
     > Both clients will automatically load their keys from disk, connect to the relay, and register their presence.
 
@@ -82,8 +82,8 @@ You'll need a rust runtime (duh) to run all the code. I recommend using `rustup`
 * `x25519-dalek` implements elliptic curve Diffie-Hellman for key exchange and to establish shared secrets.
 * `ed25519-dalek` implements Edwards-curve Digital Signature Algorithm (provides authentication).
 * `chacha20poly1305` implements the ChaCha20 stream cipher with Poly1305 MAC (AEAD) for symmetric encryption of the chat messages.
-* `rand` A library for secure random number generation, critical for generating ephemeral keys and nonces.
-* `zeroize` Ensures sensitive memory (like private keys) is securely cleared/overwritten when dropped to prevent memory dump attacks.
+* `rand` for secure random ephemeral key and nonce generation
+* `zeroize` ensures sensitive memory (like private keys) is securely cleared/overwritten when dropped to prevent memory dump attacks.
 * `serde` for serializing and deserializing Rust data structures efficiently.
 * `bincode` to encode packets for network transmission. It is smaller and faster than JSON I believe.
 * `hex` to encode keys into readable strings for storage
@@ -99,3 +99,4 @@ Any (ostensibly) encrypted chat app worth its salt must bring something to the t
 - [x] Man-in-the-Middle Protection: The client verifies the signature of the Handshake packet. If an attacker tries to inject their own public key during the handshake, the signature verification will fail (assuming the users have already exchanged trusted public keys via the keys/ directory).
 - [ ] Replay Protection: Currently, the Rust client does not implement sequence numbers or timestamps (unlike the Python prototype which checked timestamps). A "Replay Protection" mechanism is required to prevent an attacker from capturing a valid encrypted packet and re-sending it later to confuse the client.
 - [ ] Perfect Forward Secrecy (Per-Message): This would advance the encryption key with every single message, ensuring that even if a session key is compromised mid-chat, previous messages in that same session remain secure.
+- [ ] Some form of PKI (stretch goal)
