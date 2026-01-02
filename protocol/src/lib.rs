@@ -1,14 +1,15 @@
+pub mod crypto;
+pub mod error;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Packet {
-    #[serde(flatten)]
     pub msg: MessageType,
-    pub signature: String,
+    pub signature: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "type", content = "payload", rename_all = "lowercase")]
 pub enum MessageType {
     Registration {
         sender: String,
@@ -17,11 +18,17 @@ pub enum MessageType {
     Message {
         sender: String,
         recipient: String,
-        ciphertext: String,
-        mac: String
+        content: Vec<u8>,
     },
     Handshake {
         sender: String,
-        pubkey: u64
+        recipient: String,
+        pubkey: [u8; 32]
+    }
+}
+
+impl Packet {
+    pub fn as_signable_bytes(&self) -> Result<Vec<u8>, bincode::Error> {
+        bincode::serialize(&self.msg)
     }
 }
